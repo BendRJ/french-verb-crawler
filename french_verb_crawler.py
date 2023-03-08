@@ -1,79 +1,76 @@
 import requests
 from bs4 import BeautifulSoup
 import pandas as pd
-import os
-import logging
+from datetime import datetime
+import time
 
-list_of_verbs = ['avoir']
-#                 , 'etre', 'venir', 'aller', 'parler', 'faire'
-#, 'prendre', 'vouloir', 'savoir', 'pouvoir', 'dire', 'interdire', 'donner', 'penser'
-#, 'aider', 'aimer', 'devoir', 'habiter', 'regarder', 'utiliser', 'essayer'
-#, 'acheter', 'asseoir', 'ecrire', 'boire', 'comprendre', 'connaître', 'convaincre'
-#, 'courir', 'croire', 'envoyer', 'falloir', 'lire', 'manger', 'mettre', 'recevoir', 'rire'
-#, 'suivre', 'tenir', 'voir', 'vivre', 'trouver', 'passer', 'demander', 'conclure', 'construire'
-#, 'porter', 'montrer', 'commencer', 'compter', 'entendre', 'attendre', 'appeler', 'permettre'
-#, 'partir', 'décider', 'arriver', 'répondre', 'accepter', 'jouer', 'choisir', 'toucher', 'perdre'
-#, 'ouvrir', 'exister', 'gagner', 'travailler', 'risquer', 'apprendre', 'entrer', 'atteindre'
-#, 'produire', 'préparer', 'écrire', 'créer', 'courir', 'contenir', 'couvrir', 'décevoir', 'sentir'
-#, 'suffire', 'servir', 'rompre', 'prédire', 'pourvoir', 'plaire', 'placer', 'payer', 'naître'
-#, 'mourir', 'lever', 'lancer', 'joindre', 'jeter', 'craindre', 'conduire', 'bouillir', 'battre'
-#, 'apprécier', 'extraire', 'sortir', 'sourir', 'preferer', 'changer'] 
+list_of_verbs = ['avoir'
+, 'etre', 'venir', 'aller', 'parler', 'faire'
+, 'prendre', 'vouloir', 'savoir', 'pouvoir', 'dire', 'interdire', 'donner', 'penser'
+, 'aider', 'aimer', 'devoir', 'habiter', 'regarder', 'utiliser', 'essayer'
+, 'acheter', 'asseoir', 'ecrire', 'boire', 'comprendre', 'connaître', 'convaincre'
+, 'courir', 'croire', 'envoyer', 'lire', 'manger', 'mettre', 'recevoir', 'rire'
+, 'suivre', 'tenir', 'voir', 'vivre', 'trouver', 'passer', 'demander', 'conclure', 'construire'
+, 'porter', 'montrer', 'commencer', 'compter', 'entendre', 'attendre', 'appeler', 'permettre'
+, 'partir', 'décider', 'arriver', 'répondre', 'accepter', 'jouer', 'choisir', 'toucher', 'perdre'
+, 'ouvrir', 'exister', 'gagner', 'travailler', 'risquer', 'apprendre', 'entrer', 'atteindre'
+, 'produire', 'préparer', 'écrire', 'créer', 'courir', 'contenir', 'couvrir', 'décevoir', 'sentir'
+, 'suffire', 'servir', 'rompre', 'prédire', 'pourvoir', 'plaire', 'placer', 'payer', 'naître'
+, 'mourir', 'lever', 'lancer', 'joindre', 'jeter', 'craindre', 'conduire', 'bouillir', 'battre'
+, 'apprécier', 'extraire', 'sortir', 'sourir', 'preferer', 'changer'] 
+
 list_of_urls = []
 appended_data = []
+
 print('Retrieving '+str(len(list_of_verbs))+' verb conjugations.')
 
-def count_nested_list(l):
-    return sum(isinstance(i, list) for i in l)
+start_time = datetime.now()
 
 def flatten(l):
     return [item for sublist in l for item in sublist]
 
 for verb in list_of_verbs:
-    link = f'https://konjugator.reverso.net/konjugation-franzosisch-verb-{verb}.html'
-    list_of_urls.append(link)
-    print('Number of urls: '+str(len(list_of_urls)))
+    time.sleep(2)
+    print(f"Loading -{verb}- now...")
+    url = f'https://konjugator.reverso.net/konjugation-franzosisch-verb-{verb}.html'
 
- 
-for url in list_of_urls:
     page = requests.get(url,headers={'User-Agent': 'Mozilla/5.0'})
     doc = BeautifulSoup(page.text, "html.parser")
-
     temps = doc.find_all('div', class_='blue-box-wrap') #all temps in this wrapper
-    #infinitif = doc.find_all('div', class_='verb-forms-wrap')
-    #print(temps)
 
-    #print(temps[0]['mobile-title'])
-    # print(temps[0]['graytxt'])
-    # print(temps[0].text)
-
-    temp_name = []
     pre = {}
-    result = {}
 
     for index, temp in enumerate(temps):
-        #titles = temps[index].find('p').string
         title = temps[index]['mobile-title']
-        temp_name.append(title)
-        verbs = temps[index].find_all('i', class_='verbtxt')
+
+        particles = temps[index].find_all('i', class_='particletxt')
         pronouns = temps[index].find_all('i', class_='graytxt')
-        if title not in pre:
-            pre[title] = [pronouns[index].text for index, pronoun in enumerate(pronouns)]
-            pre[title].append([verbs[index].text for index, verb in enumerate(verbs)])
-        #print(pre)
-                
-    for key, value in pre.items():
-        if len(value) != 1: #captures all cases where we have pronouns for each verbform of the temp
-            result[key] = [str(value[i])+str(value[-1][i]) for i in range (len(value)-1)] #-1 because the -1 element is the nested list
-        else:
-            result[key] = flatten(value)[-6:] #sometimes there are 2x6 conjugated verb forms with slightly different writing. We keep the last six.
+        verbs_aux = temps[index].find_all('i', class_='auxgraytxt')
+        verbs = temps[index].find_all('i', class_='verbtxt')
 
-    #print(result)
+        if title not in pre:  
+            pre[title] = [[particle.text for particle in particles]]
+            pre[title].append([pronoun.text for pronoun in pronouns])
+            pre[title].append([verb_aux.text for verb_aux in verbs_aux])
+            pre[title].append([verb.text for verb in verbs])
 
+    dict_without_empty_lists = {
+    key: [lst for lst in value if lst] for key, value in pre.items() if value #checks for empty values and empty lists in values
+    }
+    
+    result = {key: ["".join(x) for x in zip(*value)][:6] for key, value in dict_without_empty_lists.items()} #x is a tuple created from zip
+    #[:6] indexing used to remove the additional writing variants for some verbs
     df = pd.DataFrame.from_dict(result,orient='index').transpose()
     appended_data.append(df) #list of dataframes
     
 appended_data = pd.concat(appended_data)
-print(appended_data)
+print(appended_data.head())
 
-appended_data.to_excel('french_verbs_v4.xlsx', index=False)
+current_timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+filename = f"french_verbs_{current_timestamp}.xlsx"
+appended_data.to_excel(filename, index=False)
 
+end_time = datetime.now()
+delta = end_time - start_time
+duration = delta.total_seconds() / 60
+print(f"Crawl done after {duration} minutes.")
